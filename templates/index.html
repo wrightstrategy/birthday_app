@@ -93,6 +93,34 @@
     .actions {
       justify-self: end;
     }
+    .summary-actions {
+      align-items: center;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+    .confetti-banner {
+      background: #fff7fb;
+      border: 1px solid #e8b8c8;
+      border-radius: 0.5rem;
+      color: #7d2348;
+      font-weight: 650;
+      margin: 0 0 1rem;
+      padding: 0.75rem 1rem;
+      text-align: center;
+    }
+    .confetti-banner[hidden] {
+      display: none;
+    }
+    #confetti-canvas {
+      height: 100%;
+      left: 0;
+      pointer-events: none;
+      position: fixed;
+      top: 0;
+      width: 100%;
+      z-index: 9999;
+    }
     time, .unknown { color: #684b57; }
     form {
       align-items: end;
@@ -157,6 +185,7 @@
   </style>
 </head>
 <body>
+  <canvas id="confetti-canvas" aria-hidden="true"></canvas>
   <main>
     <h1>Birthday list</h1>
     <div class="summary-row">
@@ -164,7 +193,12 @@
         <strong>{{ order_label }}</strong> &middot;
         {{ people|length }} {{ "name" if people|length == 1 else "names" }} read
       </p>
-      <a class="button secondary" href="/download">Download CSV</a>
+      <div class="summary-actions">
+        <button type="button" id="confetti-button" class="button secondary" aria-label="Deploy confetti">
+          🎉 Confetti
+        </button>
+        <a class="button secondary" href="/download">Download CSV</a>
+      </div>
     </div>
 
     <nav class="sorts" aria-label="Sort birthdays">
@@ -186,6 +220,8 @@
     {% if error %}
       <p class="error" role="alert">{{ error }}</p>
     {% endif %}
+
+    <p id="confetti-banner" class="confetti-banner" role="status" hidden></p>
 
     {% if people %}
       <div class="person-header" aria-hidden="true">
@@ -262,5 +298,120 @@
       <button type="submit">Add name</button>
     </form>
   </main>
+  <script>
+    (function () {
+      const canvas = document.getElementById("confetti-canvas");
+      const banner = document.getElementById("confetti-banner");
+      if (!canvas || !banner) return;
+
+      const todayBirthdays = {{ today_birthdays|tojson }};
+      const ctx = canvas.getContext("2d");
+      const colors = ["#9d2859", "#e8b8c8", "#f3cede", "#7d2348", "#ffd166", "#06d6a0", "#4cc9f0", "#fff"];
+      let particles = [];
+      let animating = false;
+      let bannerTimer = null;
+
+      function resize() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+      }
+
+      function spawnBurst() {
+        const count = 140;
+        for (let i = 0; i < count; i += 1) {
+          const angle = (Math.PI * 2 * i) / count + Math.random() * 0.4;
+          const speed = 6 + Math.random() * 10;
+          particles.push({
+            x: canvas.width / 2 + (Math.random() - 0.5) * 80,
+            y: canvas.height * 0.28,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed - 4,
+            size: 5 + Math.random() * 7,
+            color: colors[Math.floor(Math.random() * colors.length)],
+            rotation: Math.random() * Math.PI * 2,
+            spin: (Math.random() - 0.5) * 0.35,
+            life: 1,
+            decay: 0.008 + Math.random() * 0.01,
+            shape: Math.random() < 0.5 ? "rect" : "circle",
+          });
+        }
+      }
+
+      function drawParticle(p) {
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.rotation);
+        ctx.globalAlpha = Math.max(p.life, 0);
+        ctx.fillStyle = p.color;
+        if (p.shape === "circle") {
+          ctx.beginPath();
+          ctx.arc(0, 0, p.size / 2, 0, Math.PI * 2);
+          ctx.fill();
+        } else {
+          ctx.fillRect(-p.size / 2, -p.size / 4, p.size, p.size / 2);
+        }
+        ctx.restore();
+      }
+
+      function tick() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        particles = particles.filter((p) => p.life > 0);
+        for (const p of particles) {
+          p.vy += 0.18;
+          p.vx *= 0.99;
+          p.x += p.vx;
+          p.y += p.vy;
+          p.rotation += p.spin;
+          p.life -= p.decay;
+          drawParticle(p);
+        }
+        if (particles.length) {
+          requestAnimationFrame(tick);
+        } else {
+          animating = false;
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+      }
+
+      function formatNames(names) {
+        if (names.length === 1) return names[0];
+        if (names.length === 2) return names[0] + " and " + names[1];
+        return names.slice(0, -1).join(", ") + ", and " + names[names.length - 1];
+      }
+
+      function celebrate(names) {
+        resize();
+        spawnBurst();
+        // A second delayed burst makes it feel more like a real drop.
+        window.setTimeout(spawnBurst, 180);
+        if (!animating) {
+          animating = true;
+          requestAnimationFrame(tick);
+        }
+        banner.hidden = false;
+        banner.textContent = names && names.length
+          ? "🎉 Happy birthday, " + formatNames(names) + "!"
+          : "🎉 Happy birthday!";
+        window.clearTimeout(bannerTimer);
+        bannerTimer = window.setTimeout(function () {
+          banner.hidden = true;
+          banner.textContent = "";
+        }, 3500);
+      }
+
+      window.addEventListener("resize", resize);
+      const button = document.getElementById("confetti-button");
+      if (button) {
+        button.addEventListener("click", function () {
+          celebrate(todayBirthdays.length ? todayBirthdays : null);
+        });
+      }
+
+      // Auto-deploy confetti when someone has a birthday today.
+      if (todayBirthdays.length) {
+        celebrate(todayBirthdays);
+      }
+    })();
+  </script>
 </body>
 </html>
