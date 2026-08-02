@@ -36,6 +36,8 @@ your machine.
 - **Set a birthday** — pick a person and a date. The name dropdown preselects the
   first person still missing a birthday, so you can work down the list.
 - **Add a name** — appends a person, with an optional birthday in the same step.
+- **Color theme** — choose the pink or blue page theme; the choice is remembered
+  in a cookie for future visits.
 - **Download CSV** — saves a local copy of the birthday store as `birthdays.csv`
   (same `name,birthdate` format the app uses).
 

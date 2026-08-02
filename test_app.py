@@ -71,6 +71,47 @@ def test_default_page_contains_names_in_file_order(client):
     assert "Original file order" in page
 
 
+def test_default_page_uses_pink_theme(client):
+    response = client.get("/")
+
+    assert response.status_code == 200
+    assert 'data-theme="pink"' in response.get_data(as_text=True)
+
+
+def test_posting_blue_theme_sets_cookie_and_applies_theme(client):
+    response = client.post("/theme", data={"theme": "blue"})
+
+    assert response.status_code == 302
+    assert "theme=blue" in response.headers["Set-Cookie"]
+    page = client.get(response.headers["Location"]).get_data(as_text=True)
+    assert 'data-theme="blue"' in page
+
+
+def test_posting_unknown_theme_falls_back_to_pink(client):
+    response = client.post("/theme", data={"theme": "chartreuse"})
+
+    assert response.status_code == 302
+    assert "theme=pink" in response.headers["Set-Cookie"]
+    page = client.get(response.headers["Location"]).get_data(as_text=True)
+    assert 'data-theme="pink"' in page
+
+
+def test_unknown_theme_cookie_renders_pink(client):
+    client.set_cookie("theme", "garbage")
+
+    response = client.get("/")
+
+    assert response.status_code == 200
+    assert 'data-theme="pink"' in response.get_data(as_text=True)
+
+
+def test_post_theme_preserves_active_sort_in_redirect(client):
+    response = client.post("/theme?sort=age_desc", data={"theme": "blue"})
+
+    assert response.status_code == 302
+    assert response.headers["Location"] == "/?sort=age_desc"
+
+
 def test_alphabetical_sort_is_case_insensitive(client):
     response = client.get("/?sort=alpha")
     page = response.get_data(as_text=True)
@@ -278,6 +319,27 @@ def test_page_includes_today_birthdays_for_auto_confetti(client, files, monkeypa
     # Manual confetti control and full-width birthday banner remain available.
     assert 'id="confetti-button"' in page
     assert 'id="birthday-mega-banner"' in page
+
+
+def test_summary_actions_include_theme_confetti_and_download_controls(client):
+    page = client.get("/").get_data(as_text=True)
+    actions = page[page.index('<div class="summary-actions">') :]
+    actions = actions[: actions.index("</div>")]
+
+    theme_form = actions.index('class="theme-form"')
+    confetti_button = actions.index('id="confetti-button"')
+    download_link = actions.index('href="/download"')
+    assert theme_form < confetti_button < download_link
+
+
+def test_mega_banner_and_canvas_render_under_both_themes(client):
+    for theme in ("pink", "blue"):
+        client.set_cookie("theme", theme)
+        page = client.get("/").get_data(as_text=True)
+
+        assert f'data-theme="{theme}"' in page
+        assert 'id="birthday-mega-banner"' in page
+        assert 'id="confetti-canvas"' in page
 
 
 def test_upcoming_sort_treats_february_29_as_march_1_in_non_leap_year():

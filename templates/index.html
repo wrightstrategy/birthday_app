@@ -1,31 +1,88 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="{{ theme }}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Birthday list</title>
   <style>
+    :root {
+      --page-bg: #fff1f5;
+      --surface: #fffafb;
+      --surface-border: #e8b8c8;
+      --heading: #7d2348;
+      --body-text: #35252c;
+      --muted-text: #624852;
+      --detail-text: #684b57;
+      --label-text: #512337;
+      --accent: #9d2859;
+      --accent-strong: #7d1f47;
+      --accent-soft: #f8d5e2;
+      --accent-active: #f3cede;
+      --accent-border: #c67798;
+      --accent-active-text: #5d1835;
+      --on-accent: #fff;
+      --field-bg: #fff;
+      --field-border: #a9607d;
+      --form-bg: #fbe4ed;
+      --form-border: #e5afc2;
+      --shadow: rgb(99 29 56 / 10%);
+      --error-bg: #fff0f0;
+      --error-border: #ad273f;
+      --error-text: #7a172a;
+      --celebrate-surface: #fff7fb;
+      --celebrate-deep: #9d2859;
+      --celebrate-mid: #d64d7d;
+      --celebrate-bright: #ff8fb8;
+      --celebrate-shadow: rgb(99 29 56 / 35%);
+      --celebrate-text-shadow: rgb(61 10 30 / 45%);
+    }
+    [data-theme="blue"] {
+      --page-bg: #f1f7ff;
+      --surface: #fafcff;
+      --surface-border: #b8cfe8;
+      --heading: #234f7d;
+      --body-text: #252e35;
+      --muted-text: #485562;
+      --detail-text: #4b5968;
+      --label-text: #233a51;
+      --accent: #28659d;
+      --accent-strong: #1f527d;
+      --accent-soft: #d5e6f8;
+      --accent-active: #cedff3;
+      --accent-border: #769ec6;
+      --accent-active-text: #183b5d;
+      --field-border: #6085a9;
+      --form-bg: #e4effb;
+      --form-border: #afc9e5;
+      --shadow: rgb(29 64 99 / 10%);
+      --celebrate-surface: #f7fbff;
+      --celebrate-deep: #28659d;
+      --celebrate-mid: #4d8bd6;
+      --celebrate-bright: #8fc3ff;
+      --celebrate-shadow: rgb(29 64 99 / 35%);
+      --celebrate-text-shadow: rgb(10 35 61 / 45%);
+    }
     * { box-sizing: border-box; }
     body {
-      background: #fff1f5;
-      color: #35252c;
+      background: var(--page-bg);
+      color: var(--body-text);
       font-family: system-ui, sans-serif;
       line-height: 1.5;
       margin: 0;
     }
     main {
-      background: #fffafb;
-      border: 1px solid #e8b8c8;
+      background: var(--surface);
+      border: 1px solid var(--surface-border);
       border-radius: 0.6rem;
-      box-shadow: 0 0.25rem 1rem rgb(99 29 56 / 10%);
+      box-shadow: 0 0.25rem 1rem var(--shadow);
       margin: 3rem auto;
       max-width: 40rem;
       padding: 2rem;
     }
-    h1, h2 { color: #7d2348; }
+    h1, h2 { color: var(--heading); }
     h1 { margin-top: 0; }
     h2 { font-size: 1.15rem; margin-top: 2rem; }
-    .summary, .note { color: #624852; }
+    .summary, .note { color: var(--muted-text); }
     .summary-row {
       align-items: center;
       display: flex;
@@ -34,10 +91,16 @@
       justify-content: space-between;
     }
     .summary-row .summary { margin: 0; }
+    .summary-actions {
+      align-items: center;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
     .error {
-      background: #fff0f0;
-      border-left: 0.25rem solid #ad273f;
-      color: #7a172a;
+      background: var(--error-bg);
+      border-left: 0.25rem solid var(--error-border);
+      color: var(--error-text);
       padding: 0.75rem 1rem;
     }
     .sorts {
@@ -47,31 +110,31 @@
       margin: 1.25rem 0;
     }
     .button, button {
-      background: #9d2859;
-      border: 1px solid #9d2859;
+      background: var(--accent);
+      border: 1px solid var(--accent);
       border-radius: 0.35rem;
-      color: #fff;
+      color: var(--on-accent);
       display: inline-block;
       font: inherit;
       padding: 0.5rem 0.8rem;
       text-decoration: none;
     }
-    .button:hover, button:hover { background: #7d1f47; }
+    .button:hover, button:hover { background: var(--accent-strong); }
     .button.active {
-      background: #f3cede;
-      border-color: #c67798;
-      color: #5d1835;
+      background: var(--accent-active);
+      border-color: var(--accent-border);
+      color: var(--accent-active-text);
       font-weight: 700;
     }
     .button.secondary {
-      background: #fff;
-      border-color: #c67798;
-      color: #7d1f47;
+      background: var(--field-bg);
+      border-color: var(--accent-border);
+      color: var(--accent-strong);
     }
     .button.secondary:hover {
-      background: #f8d5e2;
-      border-color: #9d2859;
-      color: #5d1835;
+      background: var(--accent-soft);
+      border-color: var(--accent);
+      color: var(--accent-active-text);
     }
     ol { padding-left: 1.75rem; }
     li { padding: 0.35rem 0; }
@@ -82,7 +145,7 @@
       grid-template-columns: minmax(0, 1fr) minmax(9rem, auto) 3rem 4.5rem;
     }
     .person-header {
-      color: #7d2348;
+      color: var(--heading);
       font-size: 0.85rem;
       font-weight: 700;
       margin-left: 1.75rem;
@@ -93,17 +156,11 @@
     .actions {
       justify-self: end;
     }
-    .summary-actions {
-      align-items: center;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.5rem;
-    }
     .confetti-banner {
-      background: #fff7fb;
-      border: 1px solid #e8b8c8;
+      background: var(--celebrate-surface);
+      border: 1px solid var(--surface-border);
       border-radius: 0.5rem;
-      color: #7d2348;
+      color: var(--heading);
       font-weight: 650;
       margin: 0 0 1rem;
       padding: 0.75rem 1rem;
@@ -114,9 +171,9 @@
     }
     .birthday-mega-banner {
       align-items: center;
-      background: linear-gradient(90deg, #9d2859 0%, #d64d7d 35%, #ff8fb8 50%, #d64d7d 65%, #9d2859 100%);
-      box-shadow: 0 0.5rem 2rem rgb(99 29 56 / 35%);
-      color: #fff;
+      background: linear-gradient(90deg, var(--celebrate-deep) 0%, var(--celebrate-mid) 35%, var(--celebrate-bright) 50%, var(--celebrate-mid) 65%, var(--celebrate-deep) 100%);
+      box-shadow: 0 0.5rem 2rem var(--celebrate-shadow);
+      color: var(--on-accent);
       display: flex;
       font-size: clamp(1.75rem, 6vw, 4.5rem);
       font-weight: 800;
@@ -129,7 +186,7 @@
       pointer-events: none;
       position: fixed;
       text-align: center;
-      text-shadow: 0 0.12em 0.25em rgb(61 10 30 / 45%);
+      text-shadow: 0 0.12em 0.25em var(--celebrate-text-shadow);
       top: 50%;
       transform: translateY(-50%) scale(0.92);
       width: 100vw;
@@ -167,26 +224,35 @@
       width: 100%;
       z-index: 9999;
     }
-    time, .unknown { color: #684b57; }
+    time, .unknown { color: var(--detail-text); }
     form {
       align-items: end;
-      background: #fbe4ed;
-      border: 1px solid #e5afc2;
+      background: var(--form-bg);
+      border: 1px solid var(--form-border);
       border-radius: 0.5rem;
       display: grid;
       gap: 0.8rem;
       grid-template-columns: 1fr 1fr auto;
       padding: 1rem;
     }
-    form.delete-form {
+    form.delete-form, form.theme-form {
       align-items: stretch;
       background: none;
       border: none;
-      display: block;
       margin: 0;
       padding: 0;
     }
-    label { color: #512337; font-weight: 650; }
+    form.delete-form { display: block; }
+    form.theme-form {
+      align-items: center;
+      display: flex;
+      gap: 0.35rem;
+    }
+    form.theme-form button {
+      height: auto;
+      line-height: inherit;
+    }
+    label { color: var(--label-text); font-weight: 650; }
     /* A fixed height, not min-height: input[type=date] is intrinsically taller
        than select, and any divergence misaligns the labels above them. */
     select, input, form button {
@@ -194,10 +260,10 @@
       line-height: 1.2;
     }
     select, input {
-      background: #fff;
-      border: 1px solid #a9607d;
+      background: var(--field-bg);
+      border: 1px solid var(--field-border);
       border-radius: 0.3rem;
-      color: #35252c;
+      color: var(--body-text);
       display: block;
       font: inherit;
       margin-top: 0.25rem;
@@ -205,9 +271,9 @@
       width: 100%;
     }
     button.delete {
-      background: #fff;
-      border: 1px solid #c67798;
-      color: #7d1f47;
+      background: var(--field-bg);
+      border: 1px solid var(--accent-border);
+      color: var(--accent-strong);
       font-size: 0.85rem;
       height: auto;
       line-height: 1.2;
@@ -215,9 +281,9 @@
       width: auto;
     }
     button.delete:hover {
-      background: #f8d5e2;
-      border-color: #ad273f;
-      color: #7a172a;
+      background: var(--accent-soft);
+      border-color: var(--error-border);
+      color: var(--error-text);
     }
     @media (max-width: 34rem) {
       main { margin: 1rem; padding: 1.25rem; }
@@ -225,8 +291,8 @@
         gap: 0.5rem;
         grid-template-columns: minmax(0, 1fr) minmax(7.5rem, 1.5fr) 2.5rem 4rem;
       }
-      form:not(.delete-form) { grid-template-columns: 1fr; }
-      form:not(.delete-form) button { width: 100%; }
+      form:not(.delete-form):not(.theme-form) { grid-template-columns: 1fr; }
+      form:not(.delete-form):not(.theme-form) button { width: 100%; }
     }
   </style>
 </head>
@@ -243,6 +309,22 @@
         {{ people|length }} {{ "name" if people|length == 1 else "names" }} read
       </p>
       <div class="summary-actions">
+        <form
+          class="theme-form"
+          method="post"
+          action="/theme{% if sort_mode != 'original' %}?sort={{ sort_mode }}{% endif %}"
+          aria-label="Color theme"
+        >
+          {% for value, label in themes.items() %}
+            <button
+              type="submit"
+              class="button{% if theme == value %} active{% endif %}"
+              name="theme"
+              value="{{ value }}"
+              aria-pressed="{{ 'true' if theme == value else 'false' }}"
+            >{{ label }}</button>
+          {% endfor %}
+        </form>
         <button type="button" id="confetti-button" class="button secondary" aria-label="Deploy confetti">
           🎉 Confetti
         </button>
@@ -357,7 +439,18 @@
 
       const todayBirthdays = {{ today_birthdays|tojson }};
       const ctx = canvas.getContext("2d");
-      const colors = ["#9d2859", "#e8b8c8", "#f3cede", "#7d2348", "#ffd166", "#06d6a0", "#4cc9f0", "#fff"];
+      const themedColor = (property, fallback) =>
+        getComputedStyle(document.documentElement).getPropertyValue(property).trim() || fallback;
+      const colors = [
+        themedColor("--celebrate-deep", "#9d2859"),
+        themedColor("--surface-border", "#e8b8c8"),
+        themedColor("--accent-active", "#f3cede"),
+        themedColor("--heading", "#7d2348"),
+        "#ffd166",
+        "#06d6a0",
+        "#4cc9f0",
+        "#fff",
+      ];
       let particles = [];
       let animating = false;
       let bannerTimer = null;
