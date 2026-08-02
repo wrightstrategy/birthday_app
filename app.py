@@ -265,6 +265,21 @@ def get_theme(value: str | None) -> str:
     return value if value in THEMES else "pink"
 
 
+def people_with_birthday_today(
+    people: list[dict[str, str]], today: date | None = None
+) -> list[str]:
+    """Return names of people whose observed birthday falls on *today*."""
+    today = today or date.today()
+    names: list[str] = []
+    for person in people:
+        birthdate = parse_birthdate(person["birthdate"])
+        if birthdate is None:
+            continue
+        if birthday_in_year(birthdate, today.year) == today:
+            names.append(person["name"])
+    return names
+
+
 @app.route("/")
 def index():
     """Display people in original, alphabetical, age, or calendar order."""
@@ -280,6 +295,7 @@ def index():
         error = f"Unable to read birthday data: {exc}"
 
     today = app.config.get("TODAY") or date.today()
+    today_birthdays = people_with_birthday_today(people, today=today)
     people = sort_people(people, sort_mode, today=today)
     unknown_count = sum(not person["birthdate"] for person in people)
     selected_name = next(
@@ -297,6 +313,7 @@ def index():
         themes=THEMES,
         unknown_count=unknown_count,
         selected_name=selected_name,
+        today_birthdays=today_birthdays,
     )
 
 

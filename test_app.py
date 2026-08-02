@@ -7,7 +7,7 @@ from html.parser import HTMLParser
 
 import pytest
 
-from app import app, calculate_age, sort_people, us_date
+from app import app, calculate_age, people_with_birthday_today, sort_people, us_date
 
 
 class OptionParser(HTMLParser):
@@ -276,6 +276,70 @@ def test_upcoming_sort_puts_birthday_today_first():
     sorted_people = sort_people(people, "upcoming", today=date(2026, 8, 2))
 
     assert [person["name"] for person in sorted_people] == ["Today", "Tomorrow"]
+
+
+def test_people_with_birthday_today_matches_month_and_day():
+    people = [
+        {"name": "Today", "birthdate": "2000-08-02"},
+        {"name": "Tomorrow", "birthdate": "1990-08-03"},
+        {"name": "Unknown", "birthdate": ""},
+        {"name": "Also today", "birthdate": "1995-08-02"},
+    ]
+
+    assert people_with_birthday_today(people, today=date(2026, 8, 2)) == [
+        "Today",
+        "Also today",
+    ]
+
+
+def test_people_with_birthday_today_treats_leap_day_as_march_1_in_non_leap_year():
+    people = [
+        {"name": "Leap day", "birthdate": "2000-02-29"},
+        {"name": "March first", "birthdate": "1990-03-01"},
+    ]
+
+    assert people_with_birthday_today(people, today=date(2026, 3, 1)) == [
+        "Leap day",
+        "March first",
+    ]
+
+
+def test_page_includes_today_birthdays_for_auto_confetti(client, files, monkeypatch):
+    data_path, _ = files
+    write_store(
+        data_path,
+        [("Alice", "2000-08-02"), ("Bob", "1990-01-01")],
+    )
+    monkeypatch.setitem(app.config, "TODAY", date(2026, 8, 2))
+
+    page = client.get("/").get_data(as_text=True)
+
+    assert "const todayBirthdays = " in page
+    assert '"Alice"' in page
+    # Manual confetti control and full-width birthday banner remain available.
+    assert 'id="confetti-button"' in page
+    assert 'id="birthday-mega-banner"' in page
+
+
+def test_summary_actions_include_theme_confetti_and_download_controls(client):
+    page = client.get("/").get_data(as_text=True)
+    actions = page[page.index('<div class="summary-actions">') :]
+    actions = actions[: actions.index("</div>")]
+
+    theme_form = actions.index('class="theme-form"')
+    confetti_button = actions.index('id="confetti-button"')
+    download_link = actions.index('href="/download"')
+    assert theme_form < confetti_button < download_link
+
+
+def test_mega_banner_and_canvas_render_under_both_themes(client):
+    for theme in ("pink", "blue"):
+        client.set_cookie("theme", theme)
+        page = client.get("/").get_data(as_text=True)
+
+        assert f'data-theme="{theme}"' in page
+        assert 'id="birthday-mega-banner"' in page
+        assert 'id="confetti-canvas"' in page
 
 
 def test_upcoming_sort_treats_february_29_as_march_1_in_non_leap_year():

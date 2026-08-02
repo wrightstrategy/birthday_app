@@ -29,6 +29,12 @@
       --error-bg: #fff0f0;
       --error-border: #ad273f;
       --error-text: #7a172a;
+      --celebrate-surface: #fff7fb;
+      --celebrate-deep: #9d2859;
+      --celebrate-mid: #d64d7d;
+      --celebrate-bright: #ff8fb8;
+      --celebrate-shadow: rgb(99 29 56 / 35%);
+      --celebrate-text-shadow: rgb(61 10 30 / 45%);
     }
     [data-theme="blue"] {
       --page-bg: #f1f7ff;
@@ -49,6 +55,12 @@
       --form-bg: #e4effb;
       --form-border: #afc9e5;
       --shadow: rgb(29 64 99 / 10%);
+      --celebrate-surface: #f7fbff;
+      --celebrate-deep: #28659d;
+      --celebrate-mid: #4d8bd6;
+      --celebrate-bright: #8fc3ff;
+      --celebrate-shadow: rgb(29 64 99 / 35%);
+      --celebrate-text-shadow: rgb(10 35 61 / 45%);
     }
     * { box-sizing: border-box; }
     body {
@@ -144,6 +156,74 @@
     .actions {
       justify-self: end;
     }
+    .confetti-banner {
+      background: var(--celebrate-surface);
+      border: 1px solid var(--surface-border);
+      border-radius: 0.5rem;
+      color: var(--heading);
+      font-weight: 650;
+      margin: 0 0 1rem;
+      padding: 0.75rem 1rem;
+      text-align: center;
+    }
+    .confetti-banner[hidden] {
+      display: none;
+    }
+    .birthday-mega-banner {
+      align-items: center;
+      background: linear-gradient(90deg, var(--celebrate-deep) 0%, var(--celebrate-mid) 35%, var(--celebrate-bright) 50%, var(--celebrate-mid) 65%, var(--celebrate-deep) 100%);
+      box-shadow: 0 0.5rem 2rem var(--celebrate-shadow);
+      color: var(--on-accent);
+      display: flex;
+      font-size: clamp(1.75rem, 6vw, 4.5rem);
+      font-weight: 800;
+      justify-content: center;
+      left: 0;
+      letter-spacing: 0.04em;
+      line-height: 1.15;
+      min-height: clamp(5rem, 14vw, 9rem);
+      padding: 1.25rem 1.5rem;
+      pointer-events: none;
+      position: fixed;
+      text-align: center;
+      text-shadow: 0 0.12em 0.25em var(--celebrate-text-shadow);
+      top: 50%;
+      transform: translateY(-50%) scale(0.92);
+      width: 100vw;
+      z-index: 10000;
+      animation: mega-banner-in 0.55s cubic-bezier(0.22, 1.2, 0.36, 1) forwards,
+                 mega-banner-pulse 1.4s ease-in-out 0.55s infinite alternate;
+    }
+    .birthday-mega-banner[hidden] {
+      display: none;
+    }
+    .birthday-mega-banner .mega-text {
+      max-width: min(96vw, 56rem);
+      overflow-wrap: anywhere;
+    }
+    @keyframes mega-banner-in {
+      from {
+        opacity: 0;
+        transform: translateY(-50%) scale(0.6) rotate(-2deg);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(-50%) scale(1) rotate(0deg);
+      }
+    }
+    @keyframes mega-banner-pulse {
+      from { filter: brightness(1); }
+      to { filter: brightness(1.08); }
+    }
+    #confetti-canvas {
+      height: 100%;
+      left: 0;
+      pointer-events: none;
+      position: fixed;
+      top: 0;
+      width: 100%;
+      z-index: 9999;
+    }
     time, .unknown { color: var(--detail-text); }
     form {
       align-items: end;
@@ -217,6 +297,10 @@
   </style>
 </head>
 <body>
+  <canvas id="confetti-canvas" aria-hidden="true"></canvas>
+  <div id="birthday-mega-banner" class="birthday-mega-banner" role="status" aria-live="polite" hidden>
+    <span class="mega-text"></span>
+  </div>
   <main>
     <h1>Birthday list</h1>
     <div class="summary-row">
@@ -241,6 +325,9 @@
             >{{ label }}</button>
           {% endfor %}
         </form>
+        <button type="button" id="confetti-button" class="button secondary" aria-label="Deploy confetti">
+          🎉 Confetti
+        </button>
         <a class="button secondary" href="/download">Download CSV</a>
       </div>
     </div>
@@ -264,6 +351,8 @@
     {% if error %}
       <p class="error" role="alert">{{ error }}</p>
     {% endif %}
+
+    <p id="confetti-banner" class="confetti-banner" role="status" hidden></p>
 
     {% if people %}
       <div class="person-header" aria-hidden="true">
@@ -340,5 +429,154 @@
       <button type="submit">Add name</button>
     </form>
   </main>
+  <script>
+    (function () {
+      const canvas = document.getElementById("confetti-canvas");
+      const banner = document.getElementById("confetti-banner");
+      const megaBanner = document.getElementById("birthday-mega-banner");
+      const megaText = megaBanner && megaBanner.querySelector(".mega-text");
+      if (!canvas || !banner || !megaBanner || !megaText) return;
+
+      const todayBirthdays = {{ today_birthdays|tojson }};
+      const ctx = canvas.getContext("2d");
+      const themedColor = (property, fallback) =>
+        getComputedStyle(document.documentElement).getPropertyValue(property).trim() || fallback;
+      const colors = [
+        themedColor("--celebrate-deep", "#9d2859"),
+        themedColor("--surface-border", "#e8b8c8"),
+        themedColor("--accent-active", "#f3cede"),
+        themedColor("--heading", "#7d2348"),
+        "#ffd166",
+        "#06d6a0",
+        "#4cc9f0",
+        "#fff",
+      ];
+      let particles = [];
+      let animating = false;
+      let bannerTimer = null;
+      let megaTimer = null;
+
+      function resize() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+      }
+
+      function spawnBurst() {
+        const count = 140;
+        for (let i = 0; i < count; i += 1) {
+          const angle = (Math.PI * 2 * i) / count + Math.random() * 0.4;
+          const speed = 6 + Math.random() * 10;
+          particles.push({
+            x: canvas.width / 2 + (Math.random() - 0.5) * 80,
+            y: canvas.height * 0.28,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed - 4,
+            size: 5 + Math.random() * 7,
+            color: colors[Math.floor(Math.random() * colors.length)],
+            rotation: Math.random() * Math.PI * 2,
+            spin: (Math.random() - 0.5) * 0.35,
+            life: 1,
+            decay: 0.008 + Math.random() * 0.01,
+            shape: Math.random() < 0.5 ? "rect" : "circle",
+          });
+        }
+      }
+
+      function drawParticle(p) {
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.rotation);
+        ctx.globalAlpha = Math.max(p.life, 0);
+        ctx.fillStyle = p.color;
+        if (p.shape === "circle") {
+          ctx.beginPath();
+          ctx.arc(0, 0, p.size / 2, 0, Math.PI * 2);
+          ctx.fill();
+        } else {
+          ctx.fillRect(-p.size / 2, -p.size / 4, p.size, p.size / 2);
+        }
+        ctx.restore();
+      }
+
+      function tick() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        particles = particles.filter((p) => p.life > 0);
+        for (const p of particles) {
+          p.vy += 0.18;
+          p.vx *= 0.99;
+          p.x += p.vx;
+          p.y += p.vy;
+          p.rotation += p.spin;
+          p.life -= p.decay;
+          drawParticle(p);
+        }
+        if (particles.length) {
+          requestAnimationFrame(tick);
+        } else {
+          animating = false;
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+      }
+
+      function formatNames(names) {
+        if (names.length === 1) return names[0];
+        if (names.length === 2) return names[0] + " and " + names[1];
+        return names.slice(0, -1).join(", ") + ", and " + names[names.length - 1];
+      }
+
+      function showMegaBanner(message) {
+        // Restart the entrance animation if the banner is already visible.
+        megaBanner.hidden = true;
+        // Force reflow so removing [hidden] retriggers keyframes.
+        void megaBanner.offsetWidth;
+        megaText.textContent = message;
+        megaBanner.hidden = false;
+        window.clearTimeout(megaTimer);
+        megaTimer = window.setTimeout(function () {
+          megaBanner.hidden = true;
+          megaText.textContent = "";
+        }, 5500);
+      }
+
+      function celebrate(names) {
+        resize();
+        spawnBurst();
+        // A second delayed burst makes it feel more like a real drop.
+        window.setTimeout(spawnBurst, 180);
+        if (!animating) {
+          animating = true;
+          requestAnimationFrame(tick);
+        }
+        const message = names && names.length
+          ? "🎉 Happy birthday, " + formatNames(names) + "!"
+          : "🎉 Happy birthday!";
+        banner.hidden = false;
+        banner.textContent = message;
+        window.clearTimeout(bannerTimer);
+        bannerTimer = window.setTimeout(function () {
+          banner.hidden = true;
+          banner.textContent = "";
+        }, 3500);
+
+        // Full-width mega banner when celebrating named birthdays (today's people).
+        if (names && names.length) {
+          showMegaBanner(message);
+        }
+      }
+
+      window.addEventListener("resize", resize);
+      const button = document.getElementById("confetti-button");
+      if (button) {
+        button.addEventListener("click", function () {
+          celebrate(todayBirthdays.length ? todayBirthdays : null);
+        });
+      }
+
+      // Auto-deploy confetti + huge banner when someone has a birthday today.
+      if (todayBirthdays.length) {
+        celebrate(todayBirthdays);
+      }
+    })();
+  </script>
 </body>
 </html>
