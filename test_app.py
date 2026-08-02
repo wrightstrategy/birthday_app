@@ -424,6 +424,47 @@ def test_post_person_preserves_active_sort_in_redirect(client):
     assert response.headers["Location"] == "/?sort=age_desc"
 
 
+def test_post_delete_removes_person_and_preserves_sort(client, files):
+    data_path, _ = files
+    write_store(data_path, [("Alice", "1994-06-15"), ("Bob", "1988-01-02")])
+
+    response = client.post("/delete?sort=alpha", data={"name": "Alice"})
+
+    assert response.status_code == 302
+    assert response.headers["Location"] == "/?sort=alpha"
+    assert read_store(data_path) == [{"name": "Bob", "birthdate": "1988-01-02"}]
+    page = client.get(response.headers["Location"]).get_data(as_text=True)
+    assert "Alice" not in page
+    assert "Bob" in page
+
+
+def test_post_delete_unknown_name_shows_error_and_leaves_store_byte_identical(
+    client, files
+):
+    data_path, _ = files
+    write_store(data_path, [("Alice", "1994-06-15")])
+    original_contents = data_path.read_bytes()
+
+    response = client.post("/delete", data={"name": "Nobody"})
+
+    assert response.status_code == 302
+    assert data_path.read_bytes() == original_contents
+    page = client.get(response.headers["Location"]).get_data(as_text=True)
+    assert "not in the birthday store" in page
+    assert "Alice" in page
+
+
+def test_delete_button_is_rendered_for_each_person(client, files):
+    data_path, _ = files
+    write_store(data_path, [("Alice", ""), ("Bob", "")])
+
+    page = client.get("/").get_data(as_text=True)
+
+    assert 'aria-label="Delete Alice"' in page
+    assert 'aria-label="Delete Bob"' in page
+    assert 'action="/delete"' in page
+
+
 def test_birthdates_display_in_us_long_format(client, files):
     data_path, _ = files
     write_store(data_path, [("Ada", "1998-04-12"), ("Grace", "1995-11-03")])
