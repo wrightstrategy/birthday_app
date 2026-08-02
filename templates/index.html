@@ -192,7 +192,9 @@
                 class="delete-form actions"
                 method="post"
                 action="/delete{% if sort_mode != 'original' %}?sort={{ sort_mode }}{% endif %}"
-                onsubmit="return confirm({{ ('Remove ' ~ person.name ~ ' from the list?')|tojson }});"
+                {# Single-quoted attribute: tojson escapes < > & and ', but not ",
+                   so a double-quoted attribute is terminated by the message's own quote. #}
+                onsubmit='return confirm({{ ("Remove " ~ person.name ~ " from the list?")|tojson }});'
               >
                 <input type="hidden" name="name" value="{{ person.name }}">
                 <button type="submit" class="delete" aria-label="Delete {{ person.name }}">Delete</button>
