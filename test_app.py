@@ -493,6 +493,49 @@ def test_delete_confirm_escapes_markup_in_names(client, files):
     assert re.search(r"onsubmit='return confirm\(\"[^']*\"\);'", page)
 
 
+def test_download_returns_csv_attachment_of_store(client, files):
+    data_path, _ = files
+    write_store(data_path, [("Alice", "1994-06-15"), ("Bob", "")])
+
+    response = client.get("/download")
+
+    assert response.status_code == 200
+    assert response.mimetype == "text/csv"
+    disposition = response.headers["Content-Disposition"]
+    assert "attachment" in disposition
+    assert "birthdays.csv" in disposition
+    body = response.get_data(as_text=True)
+    assert body.splitlines() == [
+        "name,birthdate",
+        "Alice,1994-06-15",
+        "Bob,",
+    ]
+
+
+def test_download_link_is_rendered_on_page(client):
+    page = client.get("/").get_data(as_text=True)
+
+    assert 'href="/download"' in page
+    assert "Download CSV" in page
+
+
+def test_download_with_malformed_store_redirects_with_error(client, files):
+    data_path, _ = files
+    data_path.write_text("not,a,valid,header\n", encoding="utf-8")
+
+    response = client.get("/download")
+
+    assert response.status_code == 302
+    from urllib.parse import unquote_plus
+
+    location = unquote_plus(response.headers["Location"])
+    assert location.startswith("/?error=")
+    assert "Unable to download birthday data" in location
+    page = client.get(response.headers["Location"]).get_data(as_text=True)
+    # Index re-reads the same broken store and surfaces a read error instead.
+    assert "Unable to read birthday data" in page
+
+
 def test_birthdates_display_in_us_long_format(client, files):
     data_path, _ = files
     write_store(data_path, [("Ada", "1998-04-12"), ("Grace", "1995-11-03")])

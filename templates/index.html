@@ -26,6 +26,14 @@
     h1 { margin-top: 0; }
     h2 { font-size: 1.15rem; margin-top: 2rem; }
     .summary, .note { color: #624852; }
+    .summary-row {
+      align-items: center;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem 1rem;
+      justify-content: space-between;
+    }
+    .summary-row .summary { margin: 0; }
     .error {
       background: #fff0f0;
       border-left: 0.25rem solid #ad273f;
@@ -54,6 +62,16 @@
       border-color: #c67798;
       color: #5d1835;
       font-weight: 700;
+    }
+    .button.secondary {
+      background: #fff;
+      border-color: #c67798;
+      color: #7d1f47;
+    }
+    .button.secondary:hover {
+      background: #f8d5e2;
+      border-color: #9d2859;
+      color: #5d1835;
     }
     ol { padding-left: 1.75rem; }
     li { padding: 0.35rem 0; }
@@ -141,10 +159,13 @@
 <body>
   <main>
     <h1>Birthday list</h1>
-    <p class="summary">
-      <strong>{{ order_label }}</strong> &middot;
-      {{ people|length }} {{ "name" if people|length == 1 else "names" }} read
-    </p>
+    <div class="summary-row">
+      <p class="summary">
+        <strong>{{ order_label }}</strong> &middot;
+        {{ people|length }} {{ "name" if people|length == 1 else "names" }} read
+      </p>
+      <a class="button secondary" href="/download">Download CSV</a>
+    </div>
 
     <nav class="sorts" aria-label="Sort birthdays">
       {% for value, label, href in [
