@@ -24,6 +24,8 @@ SORT_LABELS = {
     "upcoming": "Upcoming birthdays (next first)",
 }
 
+THEMES = {"pink": "Pink", "blue": "Blue"}
+
 
 def read_names(path: str | os.PathLike[str]) -> list[str]:
     """Read non-blank, whitespace-trimmed names from *path*."""
@@ -258,6 +260,11 @@ def get_sort_mode(value: str | None) -> str:
     return value if value in SORT_LABELS else "original"
 
 
+def get_theme(value: str | None) -> str:
+    """Normalize an unsupported or missing theme to pink."""
+    return value if value in THEMES else "pink"
+
+
 @app.route("/")
 def index():
     """Display people in original, alphabetical, age, or calendar order."""
@@ -286,9 +293,29 @@ def index():
         error=error,
         order_label=SORT_LABELS[sort_mode],
         sort_mode=sort_mode,
+        theme=get_theme(request.cookies.get("theme")),
+        themes=THEMES,
         unknown_count=unknown_count,
         selected_name=selected_name,
     )
+
+
+@app.post("/theme")
+def theme():
+    """Persist a color theme, then redirect to the active view."""
+    sort_mode = get_sort_mode(request.args.get("sort"))
+    selected_theme = get_theme(request.form.get("theme"))
+
+    redirect_args = {"sort": sort_mode} if sort_mode != "original" else {}
+    response = redirect(url_for("index", **redirect_args))
+    response.set_cookie(
+        "theme",
+        selected_theme,
+        max_age=365 * 24 * 60 * 60,
+        samesite="Lax",
+        httponly=False,
+    )
+    return response
 
 
 @app.post("/birthday")
