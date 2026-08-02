@@ -10,7 +10,7 @@ python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
 
 cp names.sample.txt names.txt      # your list of people, one name per line
-.venv/bin/python app.py            # http://127.0.0.1:5000
+.venv/bin/python app.py            # http://127.0.0.1:5001
 ```
 
 On first run the app creates `names.csv` from `names.txt`, with every birthday
@@ -36,6 +36,8 @@ your machine.
 - **Set a birthday** — pick a person and a date. The name dropdown preselects the
   first person still missing a birthday, so you can work down the list.
 - **Add a name** — appends a person, with an optional birthday in the same step.
+- **Download CSV** — saves a local copy of the birthday store as `birthdays.csv`
+  (same `name,birthdate` format the app uses).
 
 People with no birthday recorded always stay at the end of the age and upcoming
 sorts rather than being dropped or floated to the top.

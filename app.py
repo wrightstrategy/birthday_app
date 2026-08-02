@@ -11,7 +11,7 @@ import tempfile
 from datetime import date
 from pathlib import Path
 
-from flask import Flask, redirect, render_template, request, url_for
+from flask import Flask, redirect, render_template, request, send_file, url_for
 
 
 app = Flask(__name__)
@@ -356,10 +356,33 @@ def delete():
     return redirect(url_for("index", **redirect_args))
 
 
+@app.get("/download")
+def download():
+    """Send the birthday store as a downloadable CSV file."""
+    data_path, seed_path = get_paths()
+
+    try:
+        seed_data_file(data_path, seed_path)
+        # Validate the store before offering it for download.
+        read_people(data_path)
+    except (OSError, UnicodeError, csv.Error, ValueError) as exc:
+        return redirect(url_for("index", error=f"Unable to download birthday data: {exc}"))
+
+    return send_file(
+        data_path,
+        mimetype="text/csv",
+        as_attachment=True,
+        download_name="birthdays.csv",
+        max_age=0,
+    )
+
+
 if __name__ == "__main__":
     data_file, seed_file = get_paths()
     try:
         seed_data_file(data_file, seed_file)
     except (OSError, UnicodeError):
         pass
-    app.run(debug=True)
+    # Port 5000 is often taken by macOS AirPlay Receiver; default to 5001.
+    port = int(os.environ.get("PORT", "5001"))
+    app.run(debug=True, port=port)
