@@ -1,6 +1,7 @@
 """Tests for the birthday web application."""
 
 import csv
+import re
 from datetime import date
 from html.parser import HTMLParser
 
@@ -463,6 +464,33 @@ def test_delete_button_is_rendered_for_each_person(client, files):
     assert 'aria-label="Delete Alice"' in page
     assert 'aria-label="Delete Bob"' in page
     assert 'action="/delete"' in page
+
+
+def test_delete_confirm_handler_is_a_well_formed_attribute(client, files):
+    """The confirm() call must survive HTML attribute parsing.
+
+    tojson escapes < > & and ', but not " -- so inside a double-quoted
+    attribute the message's own quote ends the attribute early, the handler
+    never compiles, and Delete fires with no confirmation prompt.
+    """
+    data_path, _ = files
+    write_store(data_path, [("Alice", "")])
+
+    page = client.get("/").get_data(as_text=True)
+
+    handler = re.search(r"onsubmit='([^']*)'", page)
+    assert handler, "delete form has no single-quoted onsubmit handler"
+    assert handler.group(1) == 'return confirm("Remove Alice from the list?");'
+
+
+def test_delete_confirm_escapes_markup_in_names(client, files):
+    data_path, _ = files
+    write_store(data_path, [('<script>alert(1)</script>', "")])
+
+    page = client.get("/").get_data(as_text=True)
+
+    assert "<script>alert(1)</script>" not in page
+    assert re.search(r"onsubmit='return confirm\(\"[^']*\"\);'", page)
 
 
 def test_birthdates_display_in_us_long_format(client, files):
