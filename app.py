@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Small web interface for viewing names and editing their birthdays."""
 
+from __future__ import annotations
+
 import calendar
 import csv
 import os
@@ -233,6 +235,16 @@ def add_person(
     write_people(path, [*people, {"name": name, "birthdate": birthdate}])
 
 
+def delete_person(
+    path: str | os.PathLike[str], people: list[dict[str, str]], name: str
+) -> None:
+    """Remove a person by exact name and atomically persist the store."""
+    if name not in {person["name"] for person in people}:
+        raise ValueError("That name is not in the birthday store.")
+
+    write_people(path, [person for person in people if person["name"] != name])
+
+
 def get_paths() -> tuple[Path, Path]:
     """Resolve the writable store and read-only seed paths from the environment."""
     return (
@@ -313,6 +325,27 @@ def person():
         seed_data_file(data_path, seed_path)
         people = read_people(data_path)
         add_person(data_path, people, name, birthdate)
+        error = None
+    except (OSError, UnicodeError, csv.Error, ValueError) as exc:
+        error = str(exc)
+
+    redirect_args = {"sort": sort_mode} if sort_mode != "original" else {}
+    if error:
+        redirect_args["error"] = error
+    return redirect(url_for("index", **redirect_args))
+
+
+@app.post("/delete")
+def delete():
+    """Remove a person from the store, then redirect to the active view."""
+    data_path, seed_path = get_paths()
+    sort_mode = get_sort_mode(request.args.get("sort"))
+    name = request.form.get("name", "")
+
+    try:
+        seed_data_file(data_path, seed_path)
+        people = read_people(data_path)
+        delete_person(data_path, people, name)
         error = None
     except (OSError, UnicodeError, csv.Error, ValueError) as exc:
         error = str(exc)
