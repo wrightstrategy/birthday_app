@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Birthday list</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      background: #fff1f5;
+      color: #35252c;
+      font-family: system-ui, sans-serif;
+      line-height: 1.5;
+      margin: 0;
+    }
+    main {
+      background: #fffafb;
+      border: 1px solid #e8b8c8;
+      border-radius: 0.6rem;
+      box-shadow: 0 0.25rem 1rem rgb(99 29 56 / 10%);
+      margin: 3rem auto;
+      max-width: 40rem;
+      padding: 2rem;
+    }
+    h1, h2 { color: #7d2348; }
+    h1 { margin-top: 0; }
+    h2 { font-size: 1.15rem; margin-top: 2rem; }
+    .summary, .note { color: #624852; }
+    .error {
+      background: #fff0f0;
+      border-left: 0.25rem solid #ad273f;
+      color: #7a172a;
+      padding: 0.75rem 1rem;
+    }
+    .sorts {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin: 1.25rem 0;
+    }
+    .button, button {
+      background: #9d2859;
+      border: 1px solid #9d2859;
+      border-radius: 0.35rem;
+      color: #fff;
+      display: inline-block;
+      font: inherit;
+      padding: 0.5rem 0.8rem;
+      text-decoration: none;
+    }
+    .button:hover, button:hover { background: #7d1f47; }
+    .button.active {
+      background: #f3cede;
+      border-color: #c67798;
+      color: #5d1835;
+      font-weight: 700;
+    }
+    ol { padding-left: 1.75rem; }
+    li { padding: 0.35rem 0; }
+    .person, .person-header {
+      align-items: baseline;
+      display: grid;
+      gap: 1rem;
+      grid-template-columns: minmax(0, 1fr) minmax(9rem, auto) 3rem;
+    }
+    .person-header {
+      color: #7d2348;
+      font-size: 0.85rem;
+      font-weight: 700;
+      margin-left: 1.75rem;
+    }
+    .age {
+      text-align: right;
+    }
+    time, .unknown { color: #684b57; }
+    form {
+      align-items: end;
+      background: #fbe4ed;
+      border: 1px solid #e5afc2;
+      border-radius: 0.5rem;
+      display: grid;
+      gap: 0.8rem;
+      grid-template-columns: 1fr 1fr auto;
+      padding: 1rem;
+    }
+    label { color: #512337; font-weight: 650; }
+    /* A fixed height, not min-height: input[type=date] is intrinsically taller
+       than select, and any divergence misaligns the labels above them. */
+    select, input, form button {
+      height: 2.6rem;
+      line-height: 1.2;
+    }
+    select, input {
+      background: #fff;
+      border: 1px solid #a9607d;
+      border-radius: 0.3rem;
+      color: #35252c;
+      display: block;
+      font: inherit;
+      margin-top: 0.25rem;
+      padding: 0.35rem 0.45rem;
+      width: 100%;
+    }
+    @media (max-width: 34rem) {
+      main { margin: 1rem; padding: 1.25rem; }
+      .person, .person-header {
+        gap: 0.5rem;
+        grid-template-columns: minmax(0, 1fr) minmax(7.5rem, 1.5fr) 2.5rem;
+      }
+      form { grid-template-columns: 1fr; }
+      button { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Birthday list</h1>
+    <p class="summary">
+      <strong>{{ order_label }}</strong> &middot;
+      {{ people|length }} {{ "name" if people|length == 1 else "names" }} read
+    </p>
+
+    <nav class="sorts" aria-label="Sort birthdays">
+      {% for value, label, href in [
+        ("original", "Original", "/"),
+        ("alpha", "Alphabetical", "/?sort=alpha"),
+        ("age", "Age: oldest", "/?sort=age"),
+        ("age_desc", "Age: youngest", "/?sort=age_desc"),
+        ("upcoming", "Upcoming birthday", "/?sort=upcoming")
+      ] %}
+        {% if sort_mode == value %}
+          <span class="button active" aria-current="page">{{ label }}</span>
+        {% else %}
+          <a class="button" href="{{ href }}">{{ label }}</a>
+        {% endif %}
+      {% endfor %}
+    </nav>
+
+    {% if error %}
+      <p class="error" role="alert">{{ error }}</p>
+    {% endif %}
+
+    {% if people %}
+      <div class="person-header" aria-hidden="true">
+        <span>Name</span>
+        <span>Birthday</span>
+        <span class="age">Age</span>
+      </div>
+      <ol>
+        {% for person in people %}
+          <li>
+            <div class="person">
+              <span>{{ person.name }}</span>
+              {% if person.birthdate %}
+                <time datetime="{{ person.birthdate }}">{{ person.birthdate | us_date }}</time>
+              {% else %}
+                <span class="unknown" aria-label="Birthday unknown">—</span>
+              {% endif %}
+              {% if person.age is not none %}
+                <span class="age" aria-label="{{ person.name }} age">{{ person.age }}</span>
+              {% else %}
+                <span class="unknown age" aria-label="Age unknown">—</span>
+              {% endif %}
+            </div>
+          </li>
+        {% endfor %}
+      </ol>
+
+      {% if unknown_count %}
+        <p class="note">
+          {{ unknown_count }} {{ "person has" if unknown_count == 1 else "people have" }} no birthday recorded.
+        </p>
+      {% endif %}
+
+      <h2>Set a birthday</h2>
+      <form method="post" action="/birthday{% if sort_mode != 'original' %}?sort={{ sort_mode }}{% endif %}">
+          <label>
+            Name
+            <select name="name" required>
+              {% for person in people %}
+                <option value="{{ person.name }}"{% if person.name == selected_name %} selected{% endif %}>{{ person.name }}</option>
+              {% endfor %}
+            </select>
+          </label>
+          <label>
+            Birthday
+            <input type="date" name="birthdate">
+          </label>
+        <button type="submit">Save birthday</button>
+      </form>
+    {% endif %}
+
+    <h2>Add a name</h2>
+    <form method="post" action="/person{% if sort_mode != 'original' %}?sort={{ sort_mode }}{% endif %}">
+      <label>
+        Name
+        <input type="text" name="name" required>
+      </label>
+      <label>
+        Birthday (optional)
+        <input type="date" name="birthdate">
+      </label>
+      <button type="submit">Add name</button>
+    </form>
+  </main>
+</body>
+</html>

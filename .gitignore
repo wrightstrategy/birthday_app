@@ -1,0 +1,8 @@
+.venv/
+__pycache__/
+.pytest_cache/
+
+# Real people's names and birthdates stay local. Copy the .sample.* files to
+# create your own; see README.md.
+names.txt
+names.csv
