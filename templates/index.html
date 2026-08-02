@@ -112,6 +112,52 @@
     .confetti-banner[hidden] {
       display: none;
     }
+    .birthday-mega-banner {
+      align-items: center;
+      background: linear-gradient(90deg, #9d2859 0%, #d64d7d 35%, #ff8fb8 50%, #d64d7d 65%, #9d2859 100%);
+      box-shadow: 0 0.5rem 2rem rgb(99 29 56 / 35%);
+      color: #fff;
+      display: flex;
+      font-size: clamp(1.75rem, 6vw, 4.5rem);
+      font-weight: 800;
+      justify-content: center;
+      left: 0;
+      letter-spacing: 0.04em;
+      line-height: 1.15;
+      min-height: clamp(5rem, 14vw, 9rem);
+      padding: 1.25rem 1.5rem;
+      pointer-events: none;
+      position: fixed;
+      text-align: center;
+      text-shadow: 0 0.12em 0.25em rgb(61 10 30 / 45%);
+      top: 50%;
+      transform: translateY(-50%) scale(0.92);
+      width: 100vw;
+      z-index: 10000;
+      animation: mega-banner-in 0.55s cubic-bezier(0.22, 1.2, 0.36, 1) forwards,
+                 mega-banner-pulse 1.4s ease-in-out 0.55s infinite alternate;
+    }
+    .birthday-mega-banner[hidden] {
+      display: none;
+    }
+    .birthday-mega-banner .mega-text {
+      max-width: min(96vw, 56rem);
+      overflow-wrap: anywhere;
+    }
+    @keyframes mega-banner-in {
+      from {
+        opacity: 0;
+        transform: translateY(-50%) scale(0.6) rotate(-2deg);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(-50%) scale(1) rotate(0deg);
+      }
+    }
+    @keyframes mega-banner-pulse {
+      from { filter: brightness(1); }
+      to { filter: brightness(1.08); }
+    }
     #confetti-canvas {
       height: 100%;
       left: 0;
@@ -186,6 +232,9 @@
 </head>
 <body>
   <canvas id="confetti-canvas" aria-hidden="true"></canvas>
+  <div id="birthday-mega-banner" class="birthday-mega-banner" role="status" aria-live="polite" hidden>
+    <span class="mega-text"></span>
+  </div>
   <main>
     <h1>Birthday list</h1>
     <div class="summary-row">
@@ -302,7 +351,9 @@
     (function () {
       const canvas = document.getElementById("confetti-canvas");
       const banner = document.getElementById("confetti-banner");
-      if (!canvas || !banner) return;
+      const megaBanner = document.getElementById("birthday-mega-banner");
+      const megaText = megaBanner && megaBanner.querySelector(".mega-text");
+      if (!canvas || !banner || !megaBanner || !megaText) return;
 
       const todayBirthdays = {{ today_birthdays|tojson }};
       const ctx = canvas.getContext("2d");
@@ -310,6 +361,7 @@
       let particles = [];
       let animating = false;
       let bannerTimer = null;
+      let megaTimer = null;
 
       function resize() {
         canvas.width = window.innerWidth;
@@ -379,6 +431,20 @@
         return names.slice(0, -1).join(", ") + ", and " + names[names.length - 1];
       }
 
+      function showMegaBanner(message) {
+        // Restart the entrance animation if the banner is already visible.
+        megaBanner.hidden = true;
+        // Force reflow so removing [hidden] retriggers keyframes.
+        void megaBanner.offsetWidth;
+        megaText.textContent = message;
+        megaBanner.hidden = false;
+        window.clearTimeout(megaTimer);
+        megaTimer = window.setTimeout(function () {
+          megaBanner.hidden = true;
+          megaText.textContent = "";
+        }, 5500);
+      }
+
       function celebrate(names) {
         resize();
         spawnBurst();
@@ -388,15 +454,21 @@
           animating = true;
           requestAnimationFrame(tick);
         }
-        banner.hidden = false;
-        banner.textContent = names && names.length
+        const message = names && names.length
           ? "🎉 Happy birthday, " + formatNames(names) + "!"
           : "🎉 Happy birthday!";
+        banner.hidden = false;
+        banner.textContent = message;
         window.clearTimeout(bannerTimer);
         bannerTimer = window.setTimeout(function () {
           banner.hidden = true;
           banner.textContent = "";
         }, 3500);
+
+        // Full-width mega banner when celebrating named birthdays (today's people).
+        if (names && names.length) {
+          showMegaBanner(message);
+        }
       }
 
       window.addEventListener("resize", resize);
@@ -407,7 +479,7 @@
         });
       }
 
-      // Auto-deploy confetti when someone has a birthday today.
+      // Auto-deploy confetti + huge banner when someone has a birthday today.
       if (todayBirthdays.length) {
         celebrate(todayBirthdays);
       }

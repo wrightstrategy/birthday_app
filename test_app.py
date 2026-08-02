@@ -275,8 +275,9 @@ def test_page_includes_today_birthdays_for_auto_confetti(client, files, monkeypa
 
     assert "const todayBirthdays = " in page
     assert '"Alice"' in page
-    # Manual confetti control remains available.
+    # Manual confetti control and full-width birthday banner remain available.
     assert 'id="confetti-button"' in page
+    assert 'id="birthday-mega-banner"' in page
 
 
 def test_upcoming_sort_treats_february_29_as_march_1_in_non_leap_year():
